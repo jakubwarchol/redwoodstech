@@ -6,7 +6,8 @@ import ServiceManagement
 // RedwoodsTech: one menu bar pine tree that
 //  - keeps the Mac awake (left-click; filled tree = awake),
 //  - fixes external mice (acceleration off, reversed wheel; see Mouse.swift),
-//  - switches display layouts per setup of monitors + mouse (see Displays.swift).
+//  - switches display layouts per setup of monitors + mouse (see Displays.swift),
+//  - locks the keyboard for cleaning (see Keyboard.swift).
 
 func log(_ message: String) { NSLog("RedwoodsTech: \(message)") }
 
@@ -23,9 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private var tapRetryTimer: Timer?
     private lazy var layouts = LayoutSwitcher { [watcher] in !watcher.externalMice.isEmpty }
+    private let keyboard = KeyboardBlocker()
 
     private lazy var sleepyIcon = templateImage("menubar-sleeping")
     private lazy var awakeIcon = templateImage("menubar-awake")
+    private lazy var cleaningIcon = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Keyboard locked")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -38,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.layouts.setupMayHaveChanged()
         }
         watcher.start()
+        keyboard.onChange = { [weak self] in self?.updateStatus() }
         startScrollReversal()
         layouts.start()
         registerLoginItemOnFirstRun()
@@ -52,9 +56,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         setAwake(false)
+        keyboard.stop()
     }
 
     @objc private func statusItemClicked() {
+        // While cleaning, any click on the icon gives the keyboard back.
+        if keyboard.isBlocking {
+            keyboard.stop()
+            return
+        }
         let event = NSApp.currentEvent
         if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
             showMenu()
@@ -81,6 +91,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateStatus() {
+        if keyboard.isBlocking {
+            statusItem.button?.image = cleaningIcon
+            statusItem.button?.toolTip = "Keyboard locked for cleaning (click to unlock)"
+            return
+        }
         statusItem.button?.image = isAwake ? awakeIcon : sleepyIcon
         var lines = [isAwake ? "Keeping your Mac awake (click to stop)" : "Normal sleep (click to keep awake)"]
         let mice = watcher.externalMice.map(\.name)
@@ -109,6 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMenu() {
         let menu = NSMenu()
         add(menu, isAwake ? "Stop Keeping Awake" : "Keep Awake", #selector(toggleAwake))
+        add(menu, "Lock Keyboard for Cleaning", #selector(startCleaning))
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Mouse"))
@@ -167,6 +183,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleAwake() { setAwake(!isAwake) }
+
+    @objc private func startCleaning() {
+        if !keyboard.start() { openAccessibilitySettings() }
+    }
 
     @objc private func saveLayout() { layouts.saveCurrentLayout() }
 

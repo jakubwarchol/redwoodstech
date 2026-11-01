@@ -3,7 +3,7 @@
 One macOS menu bar app (a pine tree) that replaces the separate Awake and Mousefix apps and adds display layout presets.
 
 - **Left-click** the tree to keep the Mac awake (display and idle sleep blocked). Filled tree = awake, outline = normal sleep. Always starts off; closing the lid still sleeps.
-- **Right-click** (or control-click) for the menu: Keep Awake, connected mice, display layouts, Open at Login, Quit.
+- **Right-click** (or control-click) for the menu: Keep Awake, Lock Keyboard for Cleaning, connected mice, display layouts, Open at Login, Quit.
 - Registers itself as a login item on first launch and asks for Accessibility access (needed to reverse the scroll wheel).
 
 ## External mice
@@ -14,6 +14,12 @@ For every external mouse (built-in trackpad and Magic Trackpads are left alone):
 - **Scroll wheel reversed** (both axes) through a `CGEvent` tap, so the trackpad keeps natural scrolling. Events are matched to devices by HID sender ID; unknown senders fall back to "line-based events come from a wheel".
 
 Same techniques as [LinearMouse](https://github.com/linearmouse/linearmouse) (MIT). The private IOKit declarations in `Sources/Bridging.h` come from LinearMouse's `IOKitSPIMac.h` (Apple BSD-style license).
+
+## Keyboard cleaning
+
+Right-click the tree → **Lock Keyboard for Cleaning**. The tree turns into a keyboard icon and every key is ignored (letters, modifiers, Fn, media/volume/brightness keys) while the mouse and trackpad keep working. Click the keyboard icon to unlock.
+
+It unlocks on its own after 5 minutes, and whenever the Mac sleeps, the screen locks or you switch users, so you can always type your password. The power / Touch ID key can't be blocked; wipe around it. Uses an HID-level `CGEvent` tap that drops key events, the same technique as [Cleeb](https://github.com/eliseomartelli/Cleeb) and [keyboard-cleaner](https://github.com/gltchitm/keyboard-cleaner) (both MIT).
 
 ## Display layouts
 
