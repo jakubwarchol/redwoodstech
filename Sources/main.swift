@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import ApplicationServices
 import IOKit.pwr_mgt
 import ServiceManagement
@@ -7,7 +8,8 @@ import ServiceManagement
 //  - keeps the Mac awake (left-click; filled tree = awake),
 //  - fixes external mice (acceleration off, reversed wheel; see Mouse.swift),
 //  - switches display layouts per setup of monitors + mouse (see Displays.swift),
-//  - locks the keyboard for cleaning (see Keyboard.swift).
+//  - locks the keyboard for cleaning (see Keyboard.swift),
+//  - ducks every app except the frontmost one with ⌥] (see Audio.swift).
 
 func log(_ message: String) { NSLog("RedwoodsTech: \(message)") }
 
@@ -25,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var tapRetryTimer: Timer?
     private lazy var layouts = LayoutSwitcher { [watcher] in !watcher.externalMice.isEmpty }
     private let keyboard = KeyboardBlocker()
+    private let ducker = AudioDucker()
+    private var duckHotKey: HotKey?
 
     private lazy var sleepyIcon = templateImage("menubar-sleeping")
     private lazy var awakeIcon = templateImage("menubar-awake")
@@ -42,6 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         watcher.start()
         keyboard.onChange = { [weak self] in self?.updateStatus() }
+        ducker.onChange = { [weak self] in self?.updateStatus() }
+        duckHotKey = HotKey(keyCode: kVK_ANSI_RightBracket, modifiers: optionKey) { [weak self] in self?.ducker.toggle() }
         startScrollReversal()
         layouts.start()
         registerLoginItemOnFirstRun()
@@ -57,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         setAwake(false)
         keyboard.stop()
+        ducker.stop()
     }
 
     @objc private func statusItemClicked() {
@@ -100,6 +107,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var lines = [isAwake ? "Keeping your Mac awake (click to stop)" : "Normal sleep (click to keep awake)"]
         let mice = watcher.externalMice.map(\.name)
         lines.append(mice.isEmpty ? "No mouse connected" : "Mouse: \(mice.joined(separator: ", "))")
+        if ducker.isDucking {
+            lines.append("Other apps at \(Int(AudioDucker.level * 100))%, \(ducker.keptAppName ?? "frontmost app") at full (⌥])")
+        }
         if !reverser.isRunning { lines.append("Needs Accessibility access") }
         statusItem.button?.toolTip = lines.joined(separator: "\n")
     }
@@ -125,6 +135,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         add(menu, isAwake ? "Stop Keeping Awake" : "Keep Awake", #selector(toggleAwake))
         add(menu, "Lock Keyboard for Cleaning", #selector(startCleaning))
+
+        menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Sound"))
+        let duck = add(menu, ducker.isDucking
+            ? "Restore Other Apps (\(ducker.keptAppName ?? "frontmost app") at full)"
+            : "Duck Other Apps to \(Int(AudioDucker.level * 100))%", #selector(toggleDuck))
+        duck.keyEquivalent = "]"
+        duck.keyEquivalentModifierMask = .option
+        duck.state = ducker.isDucking ? .on : .off
+        if ducker.lastError != nil {
+            add(menu, "Grant System Audio Recording Access…", #selector(openAudioCaptureSettings))
+        }
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Mouse"))
@@ -186,6 +208,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func startCleaning() {
         if !keyboard.start() { openAccessibilitySettings() }
+    }
+
+    @objc private func toggleDuck() { ducker.toggle() }
+
+    @objc private func openAudioCaptureSettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture")!)
     }
 
     @objc private func saveLayout() { layouts.saveCurrentLayout() }

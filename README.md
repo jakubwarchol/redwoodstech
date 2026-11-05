@@ -1,9 +1,10 @@
 # RedwoodsTech
 
-One macOS menu bar app (a pine tree) that replaces the separate Awake and Mousefix apps and adds display layout presets.
+One macOS menu bar app (a pine tree) that replaces the separate Awake and Mousefix apps and adds display layout presets and a sound-ducking hotkey.
 
 - **Left-click** the tree to keep the Mac awake (display and idle sleep blocked). Filled tree = awake, outline = normal sleep. Always starts off; closing the lid still sleeps.
-- **Right-click** (or control-click) for the menu: Keep Awake, Lock Keyboard for Cleaning, connected mice, display layouts, Open at Login, Quit.
+- **⌥]** anywhere ducks every other app to 10% while the frontmost one stays at full volume; press again to restore.
+- **Right-click** (or control-click) for the menu: Keep Awake, Lock Keyboard for Cleaning, Duck Other Apps, connected mice, display layouts, Open at Login, Quit.
 - Registers itself as a login item on first launch and asks for Accessibility access (needed to reverse the scroll wheel).
 
 ## External mice
@@ -20,6 +21,14 @@ Same techniques as [LinearMouse](https://github.com/linearmouse/linearmouse) (MI
 Right-click the tree → **Lock Keyboard for Cleaning**. The tree turns into a keyboard icon and every key is ignored (letters, modifiers, Fn, media/volume/brightness keys) while the mouse and trackpad keep working. Click the keyboard icon to unlock.
 
 It unlocks on its own after 5 minutes, and whenever the Mac sleeps, the screen locks or you switch users, so you can always type your password. The power / Touch ID key can't be blocked; wipe around it. Uses an HID-level `CGEvent` tap that drops key events, the same technique as [Cleeb](https://github.com/eliseomartelli/Cleeb) and [keyboard-cleaner](https://github.com/gltchitm/keyboard-cleaner) (both MIT).
+
+## Duck other apps
+
+Press **⌥]** (Option + right bracket) in a game such as World of Warcraft to hear its dialogue over music, videos or Discord: every other app drops to 10% and the frontmost app keeps its full volume. Press it again (or use the menu item) to bring everything back exactly as it was; nothing's volume setting is ever changed.
+
+macOS has no per-app volume, so this uses a Core Audio process tap (macOS 14.2+): a global tap that excludes the frontmost app mutes all other apps, and a private aggregate device re-plays that tapped mix to the current output at 10% gain. Everything launched from inside the frontmost app's bundle is kept too (WoW's voice chat runs as a separate `WowVoiceProxy` helper). Plugging in headphones while ducked rebuilds it for the new output. The hotkey is a Carbon `RegisterEventHotKey`, so it works in fullscreen games without extra permissions and the game never sees the keystroke. Same technique as Apple's *Capturing system audio with Core Audio taps* sample and [AudioCap](https://github.com/insidegui/AudioCap) (BSD-2).
+
+The first duck asks for **System Audio Recording** access (System Settings → Privacy & Security); allow it. Apps that start playing after you duck are ducked too, including a helper of the kept app that only starts later (press ⌥] twice to pick it up).
 
 ## Display layouts
 
