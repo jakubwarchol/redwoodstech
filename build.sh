@@ -5,7 +5,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 APP=build/RedwoodsTech.app
+# Without that certificate the build falls back to an ad-hoc signature.
 IDENTITY="${CODESIGN_IDENTITY:-Apple Development}"
+if [ "$IDENTITY" != "-" ] && ! security find-identity -v -p codesigning | grep -q "$IDENTITY"; then
+  echo "No \"$IDENTITY\" signing identity found; using an ad-hoc signature."
+  IDENTITY="-"
+fi
 
 rm -rf build && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -o "$APP/Contents/MacOS/RedwoodsTech" Sources/*.swift \

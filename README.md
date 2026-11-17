@@ -1,6 +1,6 @@
 # RedwoodsTech
 
-One macOS menu bar app (a pine tree) that replaces the separate Awake and Mousefix apps and adds display layout presets and a sound-ducking hotkey.
+A small macOS menu bar app (a pine tree) that bundles the tweaks I want on every Mac: keep the Mac awake, make an external mouse behave, lock the keyboard for cleaning, duck every other app's sound with one hotkey, and restore display layouts automatically. Written in Swift with no dependencies.
 
 - **Left-click** the tree to keep the Mac awake (display and idle sleep blocked). Filled tree = awake, outline = normal sleep. Always starts off; closing the lid still sleeps.
 - **⌥]** anywhere ducks every other app to 10% while the frontmost one stays at full volume; press again to restore.
@@ -47,8 +47,12 @@ Not covered: rotation and mirroring (private APIs), and telling different mice a
 ./build.sh
 ```
 
-Needs Xcode or the Command Line Tools. Builds `build/RedwoodsTech.app`, signs it with the "Apple Development" identity (override with `CODESIGN_IDENTITY=...`) so the Accessibility grant survives rebuilds, installs it to `/Applications` and launches it. For logs, quit the app and run `/Applications/RedwoodsTech.app/Contents/MacOS/RedwoodsTech` in a terminal.
+Needs Xcode or the Command Line Tools. Builds `build/RedwoodsTech.app`, signs it with the "Apple Development" identity (override with `CODESIGN_IDENTITY=...`) so the Accessibility grant survives rebuilds, or with an ad-hoc signature if you have no such certificate, installs it to `/Applications` and launches it. For logs, quit the app and run `/Applications/RedwoodsTech.app/Contents/MacOS/RedwoodsTech` in a terminal.
 
 ## Icon credits
 
 Pine tree (menu bar and app icon): [Phosphor Icons](https://phosphoricons.com) `tree-evergreen` bold/fill, MIT License.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party notices are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
